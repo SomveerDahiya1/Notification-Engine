@@ -1,0 +1,146 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+' =========================
+' Package: Strategies
+' =========================
+package "NotificationSystem.Strategies" {
+
+    interface INotificationStrategy {
+        +sendNotification(content: String)
+    }
+
+    class EmailStrategy {
+        -mail: String
+        +EmailStrategy(mail: String)
+        +sendNotification(content: String)
+    }
+
+    class SmsStrategy {
+        -mobileNo: String
+        +SmsStrategy(mobileNo: String)
+        +sendNotification(content: String)
+    }
+
+    INotificationStrategy <|.. EmailStrategy
+    INotificationStrategy <|.. SmsStrategy
+}
+
+' =========================
+' Package: Decorators
+' =========================
+package "NotificationSystem.Decorators" {
+
+    interface INotification {
+        +getContent(): String
+    }
+
+    interface INotificationDecorator {
+        +getContent(): String
+    }
+
+    class SimpleNotification {
+        -msg: String
+        +SimpleNotification(msg: String)
+        +getContent(): String
+    }
+
+    class TimeStampDecorator {
+        -notification: INotification
+        +TimeStampDecorator(notification: INotification)
+        +getContent(): String
+    }
+
+    class SignatureDecorator {
+        -notification: INotification
+        -sign: String
+        +getContent(): String
+    }
+
+    INotification <|.. SimpleNotification
+    INotification <|.. INotificationDecorator
+    INotificationDecorator <|.. TimeStampDecorator
+    INotificationDecorator <|.. SignatureDecorator
+
+    TimeStampDecorator o-- INotification
+    SignatureDecorator o-- INotification
+}
+
+' =========================
+' Package: Observers
+' =========================
+package "NotificationSystem.Observers" {
+
+    interface IObserver {
+        +update()
+    }
+
+    interface IObservable {
+        +addObserver(observer: IObserver)
+        +removeObserver(observer: IObserver)
+        +notifyObservers()
+        +setNotification(notification: INotification)
+    }
+
+    class NotificationObservable {
+        -observers: List<IObserver>
+        -currentNotification: INotification
+        +addObserver(observer: IObserver)
+        +removeObserver(observer: IObserver)
+        +notifyObservers()
+        +setNotification(notification: INotification)
+        +getCurrentNotification(): INotification
+        +getNotificationContent(): String
+    }
+
+    class NotificationEngine {
+        -notificationObservable: NotificationObservable
+        -notificationStrategies: List<INotificationStrategy>
+        +NotificationEngine(notificationObservable: NotificationObservable)
+        +addStrategy(strategy: INotificationStrategy)
+        +update()
+    }
+
+    IObserver <|.. NotificationEngine
+    IObservable <|.. NotificationObservable
+
+    NotificationObservable "1" o-- "*" IObserver
+    NotificationEngine --> NotificationObservable
+    NotificationEngine --> INotificationStrategy
+}
+
+' =========================
+' Package: Managers (Singleton)
+' =========================
+package "NotificationSystem.Managers" {
+
+    class NotificationManager {
+        -notificationManager: NotificationManager
+        -notificationObservable: NotificationObservable
+        -notifications: List<INotification>
+        -NotificationManager()
+        +getInstance(): NotificationManager
+        +getObservable(): NotificationObservable
+        +sendNotification(notification: INotification)
+    }
+}
+
+NotificationManager --> NotificationObservable
+NotificationManager --> INotification
+
+' =========================
+' Package: Client
+' =========================
+package "NotificationSystem.Client" {
+
+    class Client {
+        +main(args: String[])
+    }
+}
+
+Client --> NotificationManager
+Client --> NotificationObservable
+Client --> NotificationEngine
+Client --> INotification
+
+@enduml
